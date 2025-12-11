@@ -1,203 +1,124 @@
-Design and Implementation of an AXI4-Lite Slave Peripheral
+# **Design and Implementation of an AXI4-Lite Slave Peripheral**
 
-Abstract
+This repository documents the design, verification, and hardware implementation of a synthesized **AXI4-Lite Slave peripheral** targeting **Xilinx Artix-7 FPGAs**. The module functions as a **memory-mapped I/O (MMIO) controller**, providing an interface between a host processor's AXI bus and external board peripherals such as **LEDs** and **DIP switches**.
 
-This repository documents the design, verification, and hardware implementation of a synthesized AXI4-Lite Slave peripheral targeting Xilinx Artix-7 Field-Programmable Gate Arrays (FPGAs). The module functions as a memory-mapped input/output (MMIO) controller, bridging a host processor's AXI interface with external board peripherals, specifically Light Emitting Diodes (LEDs) and Dual Inline Package (DIP) switches. The design ensures strict adherence to the AMBA AXI4-Lite protocol specifications for reliable system integration.
+The design adheres strictly to the **AMBA AXI4-Lite protocol** to ensure reliable system integration.
 
-Figure 1: RTL Simulation Waveform demonstrating valid Read/Write channel handshakes.
+---
 
-1. Architectural Specification
+## **Figure 1: RTL Simulation Waveform**
+<img width="1819" height="747" alt="wave-1" src="https://github.com/user-attachments/assets/53c27f4d-204c-49c0-87bc-deb6956f960c" />
+<img width="1839" height="445" alt="wave-2" src="https://github.com/user-attachments/assets/321dc98d-25ad-4d50-b5be-93d1b5896345" />
 
-The peripheral is designed as a slave node on the AXI4-Lite interconnect, supporting a 32-bit data width and a 4-bit address width.
+---
 
-Interface Standard: AMBA AXI4-Lite (Memory Mapped).
+# **1. Architectural Specification**
 
-Bus Arbitration: Implements compliant READY/VALID handshake logic for Write Address, Write Data, Write Response, Read Address, and Read Data channels.
+The peripheral is implemented as a slave node on the AXI4-Lite interconnect with:
 
-I/O Configuration:
+- **32-bit data width**
+- **4-bit address width**
 
-Output Path: 4-bit parallel drive for external LEDs.
+### **Interface Standard**
+- AMBA AXI4-Lite (Memory-Mapped)
 
-Input Path: 4-bit parallel capture for external DIP switches.
+### **Bus Arbitration**
+Implements fully compliant READY/VALID handshake logic for:
+- Write Address (AW)
+- Write Data (W)
+- Write Response (B)
+- Read Address (AR)
+- Read Data (R)
 
-Verification: Functional correctness was validated using a self-checking SystemVerilog testbench covering all transaction types.
+### **I/O Configuration**
+- **Output:** 4-bit parallel drive for LEDs  
+- **Input:** 4-bit parallel capture from DIP switches  
 
-2. Register Map Specification
+### **Verification**
+- Self-checking SystemVerilog testbench  
+- Covers all AXI4-Lite read/write transaction types  
 
-The peripheral exposes a 16-byte address space containing four 32-bit registers. The base address is configurable via the system address map (e.g., 0x44A00000).
+---
 
-Offset
+# **2. Register Map Specification**
 
-Register Name
+The peripheral exposes a **16-byte address space** consisting of **four 32-bit registers**.  
+The base address is configurable (e.g., `0x44A0_0000`).
 
-Access
+| Offset | Register Name | Access | Bit Definition | Description |
+|--------|----------------|--------|----------------|-------------|
+| `0x00` | `REG0_LED`     | R/W    | `[3:0]`        | Output control for LEDs |
+| `0x04` | `REG1_SW`      | R      | `[3:0]`        | Input status of DIP switches |
+| `0x08` | `REG2_RES`     | R/W    | `[31:0]`       | General-purpose storage |
+| `0x0C` | `REG3_RES`     | R/W    | `[31:0]`       | General-purpose storage |
 
-Bit Definition
+---
 
-Description
+# **3. Synthesis and Implementation Results**
 
-0x00
+The design was synthesized in **Xilinx Vivado** for the **xc7a100t-csg324-1 (Artix-7)** device, operating at **100 MHz** within a MicroBlaze processing subsystem.
 
-REG0_LED
+---
 
-R/W
+## **3.1 Resource Utilization**
 
-[3:0]
+| Resource Type | Count | Utilization (%) |
+|---------------|--------|-----------------|
+| Slice LUTs    | 9      | < 0.01% |
+| Slice Registers | 8    | < 0.01% |
+| F7 Muxes      | 0 | 0.00% |
+| Block RAM     | 0 | 0.00% |
 
-Output control for external LEDs.
+---
 
-0x04
+## **3.2 Timing Analysis**
 
-REG1_SW
+| Metric | Measured Value | Status |
+|--------|----------------|--------|
+| Worst Negative Slack (WNS) | 0.714 ns | Met |
+| Worst Hold Slack (WHS) | 0.065 ns | Met |
+| Failing Endpoints | 0 | Passed |
 
-R
+---
 
-[3:0]
+## **3.3 Power Analysis**
 
-Input status of external Switches.
+| Category | Power (W) | Share |
+|----------|-----------|--------|
+| Total On-Chip Power | 0.208 W | 100% |
+| Device Static | 0.084 W | 41% |
+| Dynamic | 0.124 W | 59% |
+| IP Logic Contribution | < 0.005 W | Negligible |
 
-0x08
+---
 
-REG2_RES
+# **4. Integration Methodology**
 
-R/W
+The AXI-Lite core is packaged using **IP-XACT** for direct import into Vivado IP Integrator.
 
-[31:0]
+### **Steps to Integrate**
+1. **Clone** this repository.
+2. In Vivado:  
+   - Go to **Settings → IP → Repository**  
+   - Add the path to the `packaged_ip/` directory  
+3. Instantiate the core (**axi_4_lite**) from **IP Catalog**  
+4. **Pin Planning**  
+   - Map LED and SW ports in the `.xdc` constraints  
+5. **Address Assignment**  
+   - Set the base address in the Address Editor  
+
+---
+
+# **5. Repository Structure**
+
+```
+.
+├── docs/           # Verification artifacts, waveforms, reports
+├── hdl/            # Synthesizable Verilog source (axi_4_lite.v)
+├── tb/             # SystemVerilog testbench (axi_4_lite_tb.v)
+├── packaged_ip/    # IP-XACT packaged peripheral for Vivado
+└── README.md
+```
+
+---
 
-Reserved for general-purpose storage.
-
-0x0C
-
-REG3_RES
-
-R/W
-
-[31:0]
-
-Reserved for general-purpose storage.
-
-3. Synthesis and Implementation Results
-
-The design was synthesized and implemented using Xilinx Vivado targeting the xc7a100t-csg324-1 device (Artix-7) within a MicroBlaze soft-processor system context running at 100 MHz.
-
-3.1 Resource Utilization
-
-The table below presents the post-implementation resource utilization on the target Artix-7 device.
-
-Resource Type
-
-Count
-
-Utilization (%)
-
-Slice LUTs
-
-9
-
-< 0.01%
-
-Slice Registers
-
-8
-
-< 0.01%
-
-F7 Muxes
-
-0
-
-0.00%
-
-Block RAM
-
-0
-
-0.00%
-
-3.2 Timing Analysis
-
-Static timing analysis confirms that the design meets all setup and hold time requirements at a system clock frequency of 100 MHz.
-
-Metric
-
-Measured Value
-
-Status
-
-Worst Negative Slack (WNS)
-
-0.714 ns
-
-Met
-
-Worst Hold Slack (WHS)
-
-0.065 ns
-
-Met
-
-Failing Endpoints
-
-0
-
-Passed
-
-3.3 Power Analysis
-
-Post-implementation power estimation indicates that the dynamic power consumption of the IP logic is minimal relative to the static device leakage and clock management overhead.
-
-Category
-
-Power (Watts)
-
-Share
-
-Total On-Chip Power
-
-0.208 W
-
-100%
-
-Device Static
-
-0.084 W
-
-41%
-
-Dynamic
-
-0.124 W
-
-59%
-
-IP Logic Contribution
-
-< 0.005 W
-
-Negligible
-
-4. Integration Methodology
-
-The core is packaged in IP-XACT format to facilitate integration within the Vivado IP Integrator environment.
-
-Repository Setup: Clone the repository to the local development environment.
-
-IP Catalog Update: In Vivado, navigate to Settings > IP > Repository and add the packaged_ip/ directory path.
-
-Instantiation: The peripheral is accessible via the IP Catalog under the designation axi_4_lite.
-
-Pin Planning: Map the LED and SW ports to the appropriate physical package pins via the constraints file (.xdc).
-
-Address Assignment: Configure the base address within the Address Editor to ensure proper memory mapping.
-
-5. Repository Organization
-
-The repository is structured as follows:
-
-docs/: Contains verification artifacts, including simulation waveforms and detailed utilization reports.
-
-hdl/: Contains the synthesizable Verilog source code (axi_4_lite.v).
-
-tb/: Contains the SystemVerilog testbench (axi_4_lite_tb.v) used for verification.
-
-packaged_ip/: Contains the generated IP-XACT files required for Vivado integration.
